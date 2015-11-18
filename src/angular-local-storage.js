@@ -1,3 +1,19 @@
+/// <reference path="../typings/angularjs/angular.d.ts" />
+
+;
+//var angular = !!angular ? {} : angular;
+
+(function(angular){
+  var isDefined = angular.isDefined,
+  isUndefined = angular.isUndefined,
+  isNumber = angular.isNumber,
+  isObject = angular.isObject,
+  isArray = angular.isArray,
+  extend = angular.extend,
+  toJson = angular.toJson,
+  isUndefinedOrNull = function(val) {return angular.isUndefined(val) || val === null;};
+
+
 var angularLocalStorage = angular.module('LocalStorageModule', []);
 
 angularLocalStorage.provider('localStorageService', function() {
@@ -112,11 +128,14 @@ angularLocalStorage.provider('localStorageService', function() {
     // Directly adds a value to local storage
     // If local storage is not available in the browser use cookies
     // Example use: localStorageService.add('library','angular');
-    var addToLocalStorage = function (key, value) {
+    var addToLocalStorage = function (key, value, timeout) {
       // Let's convert undefined values to null to get the value consistent
       if (isUndefined(value)) {
         value = null;
       } else {
+        if(!isUndefinedOrNull(timeout) && timeout instanceof Date){
+            value.timeout = timeout;
+        }
         value = toJson(value);
       }
 
@@ -166,7 +185,19 @@ angularLocalStorage.provider('localStorageService', function() {
       }
 
       try {
-        return JSON.parse(item);
+        var storedValue = JSON.parse(item);
+        var timeout = storedValue.timeout;
+        
+        if(!isUndefinedOrNull(timeout)){
+          var now = new Date();
+          if(now > timeout){
+            storedValue = null;
+          }
+          else{
+            delete storedValue.timeout;
+          }
+        }        
+        return storedValue;
       } catch (e) {
         return item;
       }
@@ -340,7 +371,19 @@ angularLocalStorage.provider('localStorageService', function() {
         if (thisCookie.indexOf(deriveQualifiedKey(key) + '=') === 0) {
           var storedValues = decodeURIComponent(thisCookie.substring(prefix.length + key.length + 1, thisCookie.length));
           try {
-            return JSON.parse(storedValues);
+            var storedValue = JSON.parse(storedValues);
+            var timeout = storedValue.timeout;
+            
+            if(!isUndefinedOrNull(timeout)){
+              var now = new Date();
+              if(now > timeout){
+                storedValue = null;
+              }
+              else{
+                delete storedValue.timeout;
+              }
+            }        
+            return storedValue;
           } catch(e) {
             return storedValues;
           }
@@ -428,3 +471,5 @@ angularLocalStorage.provider('localStorageService', function() {
     };
   }];
 });
+
+}(angular));
